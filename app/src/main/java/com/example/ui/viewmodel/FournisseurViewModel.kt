@@ -29,8 +29,8 @@ sealed class AuthUiState {
 }
 
 sealed class AuthNavigationEvent {
-    data class OpenStationForm(val isNotFoundFallback: Boolean) : AuthNavigationEvent()
-    data class OpenDetaillantForm(val isNotFoundFallback: Boolean) : AuthNavigationEvent()
+    data object OpenStationForm : AuthNavigationEvent()
+    data object OpenDetaillantForm : AuthNavigationEvent()
     data class ShowError(val message: String) : AuthNavigationEvent()
 }
 
@@ -107,15 +107,15 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
         _formSubmitState.value = FormSubmitState.Idle
     }
 
-    fun verifyStationPhone(telephone: String) {
+    fun verifyStationCredentials(telephone: String, motDePasse: String) {
         val cleaned = telephone.trim()
-        if (cleaned.isEmpty() || _authUiState.value is AuthUiState.Loading) return
+        if (cleaned.isEmpty() || motDePasse.isEmpty() || _authUiState.value is AuthUiState.Loading) return
 
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
             preferences.saveLastStationPhone(cleaned)
 
-            when (val result = repository.verifyStationPhone(cleaned)) {
+            when (val result = repository.verifyStationCredentials(cleaned, motDePasse)) {
                 is NetworkResult.Success -> {
                     _authUiState.value = AuthUiState.Idle
                     when (val lookup = result.value) {
@@ -124,34 +124,38 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
                             _prefillPhone.value = lookup.data.telephone.ifBlank { cleaned }
                             _formWarningMessage.value = null
                             _formSubmitState.value = FormSubmitState.Idle
-                            _authEvents.emit(AuthNavigationEvent.OpenStationForm(isNotFoundFallback = false))
+                            _authEvents.emit(AuthNavigationEvent.OpenStationForm)
                         }
-                        AuthLookupResult.NotFound -> {
+                        is AuthLookupResult.AuthFailed -> {
+                            _authEvents.emit(AuthNavigationEvent.ShowError(lookup.message))
+                        }
+                        is AuthLookupResult.NotFound -> {
                             _activeStationData.value = null
                             _prefillPhone.value = cleaned
-                            _formWarningMessage.value = "Numéro inconnu : Procédez au premier enregistrement GPS."
+                            _formWarningMessage.value = lookup.message
+                                ?: "Ce numéro de téléphone n'est enregistré pour aucune station. Veuillez procéder à votre premier enregistrement ci-dessous."
                             _formSubmitState.value = FormSubmitState.Idle
-                            _authEvents.emit(AuthNavigationEvent.OpenStationForm(isNotFoundFallback = true))
+                            _authEvents.emit(AuthNavigationEvent.OpenStationForm)
                         }
                     }
                 }
                 is NetworkResult.Error -> {
                     _authUiState.value = AuthUiState.Idle
-                    _authEvents.emit(AuthNavigationEvent.ShowError(result.message))
+                    _authEvents.emit(AuthNavigationEvent.ShowError("Erreur réseau : ${result.message}"))
                 }
             }
         }
     }
 
-    fun verifyDetaillantPhone(telephone: String) {
+    fun verifyDetaillantCredentials(telephone: String, motDePasse: String) {
         val cleaned = telephone.trim()
-        if (cleaned.isEmpty() || _authUiState.value is AuthUiState.Loading) return
+        if (cleaned.isEmpty() || motDePasse.isEmpty() || _authUiState.value is AuthUiState.Loading) return
 
         viewModelScope.launch {
             _authUiState.value = AuthUiState.Loading
             preferences.saveLastDetaillantPhone(cleaned)
 
-            when (val result = repository.verifyDetaillantPhone(cleaned)) {
+            when (val result = repository.verifyDetaillantCredentials(cleaned, motDePasse)) {
                 is NetworkResult.Success -> {
                     _authUiState.value = AuthUiState.Idle
                     when (val lookup = result.value) {
@@ -160,20 +164,24 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
                             _prefillPhone.value = lookup.data.telephone.ifBlank { cleaned }
                             _formWarningMessage.value = null
                             _formSubmitState.value = FormSubmitState.Idle
-                            _authEvents.emit(AuthNavigationEvent.OpenDetaillantForm(isNotFoundFallback = false))
+                            _authEvents.emit(AuthNavigationEvent.OpenDetaillantForm)
                         }
-                        AuthLookupResult.NotFound -> {
+                        is AuthLookupResult.AuthFailed -> {
+                            _authEvents.emit(AuthNavigationEvent.ShowError(lookup.message))
+                        }
+                        is AuthLookupResult.NotFound -> {
                             _activeDetaillantData.value = null
                             _prefillPhone.value = cleaned
-                            _formWarningMessage.value = "Numéro non enregistré. Créez votre boutique ci-dessous."
+                            _formWarningMessage.value = lookup.message
+                                ?: "Ce numéro n'est pas encore enregistré. Veuillez remplir le formulaire ci-dessous pour créer votre boutique."
                             _formSubmitState.value = FormSubmitState.Idle
-                            _authEvents.emit(AuthNavigationEvent.OpenDetaillantForm(isNotFoundFallback = true))
+                            _authEvents.emit(AuthNavigationEvent.OpenDetaillantForm)
                         }
                     }
                 }
                 is NetworkResult.Error -> {
                     _authUiState.value = AuthUiState.Idle
-                    _authEvents.emit(AuthNavigationEvent.ShowError(result.message))
+                    _authEvents.emit(AuthNavigationEvent.ShowError("Erreur réseau : ${result.message}"))
                 }
             }
         }
@@ -192,7 +200,7 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
                 onFailure = { error ->
                     _formSubmitState.value = FormSubmitState.Idle
                     _formEvents.emit(
-                        FormEvent.ShowError(error.localizedMessage ?: "Erreur GPS inconnue")
+                        FormEvent.ShowError(error.localizedMessage ?: "Erreur GPS : Impossible d'obtenir votre position.")
                     )
                 }
             )
@@ -208,6 +216,7 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
         nomStation: String,
         lieuDit: String,
         telephone: String,
+        motDePasse: String,
         estOuvert: Boolean,
         prixEssence: String,
         dispoEssence: Boolean,
@@ -219,7 +228,8 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
         dispoGaz12kg: Boolean,
         prixGaz35kg: String,
         dispoGaz35kg: Boolean,
-        gps: GpsCaptureResult
+        latitude: String,
+        longitude: String
     ) {
         viewModelScope.launch {
             _formSubmitState.value = FormSubmitState.Submitting
@@ -233,8 +243,9 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
                 nomStation = nomStation,
                 lieuDit = lieuDit.trim(),
                 telephone = cleanedPhone,
-                latitude = gps.latitude.toString(),
-                longitude = gps.longitude.toString(),
+                motDePasse = motDePasse.trim(),
+                latitude = latitude,
+                longitude = longitude,
                 estOuvert = if (estOuvert) "1" else "0",
                 prixEssence = prixEssence.trim().ifEmpty { "0" },
                 dispoEssence = if (dispoEssence) "1" else "0",
@@ -268,10 +279,12 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
         nomGerant: String,
         quartier: String,
         telephone: String,
+        motDePasse: String,
         prix6kg: String,
         prix12kg: String,
         enStock: Boolean,
-        gps: GpsCaptureResult
+        latitude: String,
+        longitude: String
     ) {
         viewModelScope.launch {
             _formSubmitState.value = FormSubmitState.Submitting
@@ -286,8 +299,9 @@ class FournisseurViewModel(application: Application) : AndroidViewModel(applicat
                 nomGerant = nomGerant.trim(),
                 quartier = quartier.trim(),
                 telephone = cleanedPhone,
-                latitude = gps.latitude.toString(),
-                longitude = gps.longitude.toString(),
+                motDePasse = motDePasse.trim(),
+                latitude = latitude,
+                longitude = longitude,
                 prix6kg = prix6kg.trim().ifEmpty { "0" },
                 prix12kg = prix12kg.trim().ifEmpty { "0" },
                 enStock = if (enStock) "1" else "0"

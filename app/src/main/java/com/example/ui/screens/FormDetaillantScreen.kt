@@ -30,6 +30,7 @@ import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.PropaneTank
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -64,23 +65,24 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.model.DetaillantData
-import com.example.data.model.GpsCaptureResult
 import com.example.ui.components.GpsConfirmationDialog
 import com.example.ui.components.GpsNoticeBanner
 import com.example.ui.components.SnackbarTone
+import com.example.ui.components.SosHydroPasswordField
 import com.example.ui.components.SosHydroSnackbarHost
 import com.example.ui.components.SosHydroTextField
 import com.example.ui.components.SosHydroTopBar
 import com.example.ui.components.showTypedSnackbar
-import com.example.ui.theme.DangerRed
 import com.example.ui.theme.DangerRedSoft
 import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.GasAmber
+import com.example.ui.theme.GasOrange
+import com.example.ui.theme.SkyTelemetry
+import com.example.ui.theme.Slate400
+import com.example.ui.theme.Slate700
 import com.example.ui.theme.Slate800
 import com.example.ui.theme.Slate900
 import com.example.ui.theme.Slate950
-import com.example.ui.theme.Slate400
-import com.example.ui.theme.StockEmerald
 import com.example.ui.theme.StockEmeraldBright
 import com.example.ui.viewmodel.FormEvent
 import com.example.ui.viewmodel.FormSubmitState
@@ -100,26 +102,30 @@ fun FormDetaillantScreen(
     onBack: () -> Unit,
     onRequestGpsCapture: () -> Unit,
     onCancelGpsConfirmation: () -> Unit,
-    onSubmitConfirmed: (
+    onSubmit: (
         detaillantId: String,
         nomBoutique: String,
         nomGerant: String,
         quartier: String,
         telephone: String,
+        motDePasse: String,
         prix6kg: String,
         prix12kg: String,
         enStock: Boolean,
-        gps: GpsCaptureResult
+        latitude: String,
+        longitude: String
     ) -> Unit,
     onSuccessReturnHome: () -> Unit
 ) {
-    val isEdit = detaillantData != null
+    val isNewDetaillant = detaillantData == null
     val initial = detaillantData ?: DetaillantData(telephone = prefillPhone)
 
     var nomBoutique by rememberSaveable { mutableStateOf(initial.nomBoutique) }
     var nomGerant by rememberSaveable { mutableStateOf(initial.nomGerant) }
     var quartier by rememberSaveable { mutableStateOf(initial.quartier) }
     var telephone by rememberSaveable { mutableStateOf(initial.telephone.ifBlank { prefillPhone }) }
+    var motDePasse by rememberSaveable { mutableStateOf("") }
+    var confirmerMotDePasse by rememberSaveable { mutableStateOf("") }
     var prix6kg by rememberSaveable { mutableStateOf(initial.prix6kg) }
     var prix12kg by rememberSaveable { mutableStateOf(initial.prix12kg) }
     var enStock by rememberSaveable { mutableStateOf(initial.enStock) }
@@ -129,6 +135,8 @@ fun FormDetaillantScreen(
     val focusManager = LocalFocusManager.current
     val permissionDeniedMsg = stringResource(R.string.gps_permission_denied)
     val phoneValidationMsg = stringResource(R.string.validation_phone_empty)
+    val passwordRequiredMsg = stringResource(R.string.validation_password_required)
+    val passwordMismatchMsg = stringResource(R.string.validation_password_mismatch)
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -167,16 +175,18 @@ fun FormDetaillantScreen(
             gps = formSubmitState.gps,
             onDismiss = onCancelGpsConfirmation,
             onConfirm = {
-                onSubmitConfirmed(
+                onSubmit(
                     initial.id,
                     nomBoutique,
                     nomGerant,
                     quartier,
                     telephone,
+                    motDePasse,
                     prix6kg,
                     prix12kg,
                     enStock,
-                    formSubmitState.gps
+                    formSubmitState.gps.latitude.toString(),
+                    formSubmitState.gps.longitude.toString()
                 )
             }
         )
@@ -185,15 +195,19 @@ fun FormDetaillantScreen(
     val isBusy = formSubmitState is FormSubmitState.CapturingGps ||
         formSubmitState is FormSubmitState.Submitting
 
+    val headerTitle = if (!isNewDetaillant) {
+        initial.nomBoutique.ifBlank { "Boutique Gaz" }
+    } else {
+        stringResource(R.string.form_detaillant_title_new)
+    }
+
     Scaffold(
         containerColor = Slate950,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SosHydroSnackbarHost(snackbarHostState) },
         topBar = {
             SosHydroTopBar(
-                title = stringResource(
-                    if (isEdit) R.string.form_detaillant_title_edit else R.string.form_detaillant_title_new
-                ),
+                title = headerTitle,
                 icon = Icons.Rounded.LocalFireDepartment,
                 iconTint = GasAmber,
                 onBackClick = onBack
@@ -216,7 +230,44 @@ fun FormDetaillantScreen(
                     .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                GpsNoticeBanner()
+                // Status mode pill
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isNewDetaillant) "Configuration initiale" else "Tableau de bord Boutique",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                    Surface(
+                        color = if (isNewDetaillant) {
+                            ElectricBlue.copy(alpha = 0.16f)
+                        } else {
+                            GasOrange.copy(alpha = 0.16f)
+                        },
+                        shape = RoundedCornerShape(50),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isNewDetaillant) ElectricBlue.copy(alpha = 0.4f) else GasOrange.copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (isNewDetaillant) R.string.form_badge_new_gps else R.string.form_badge_edit_stock
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isNewDetaillant) SkyTelemetry else GasAmber,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                }
+
+                // GPS Banner shown ONLY on initial creation
+                if (isNewDetaillant) {
+                    GpsNoticeBanner(text = stringResource(R.string.form_gps_notice_detaillant))
+                }
 
                 Surface(
                     color = Slate900,
@@ -261,6 +312,37 @@ fun FormDetaillantScreen(
                             isNumericMono = true,
                             testTag = "detaillant_phone_input"
                         )
+
+                        // Double password matching block
+                        Surface(
+                            color = Slate950.copy(alpha = 0.65f),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, Slate700),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                SosHydroPasswordField(
+                                    value = motDePasse,
+                                    onValueChange = { motDePasse = it },
+                                    label = stringResource(
+                                        if (isNewDetaillant) R.string.form_password_new
+                                        else R.string.form_password_optional
+                                    ),
+                                    imeAction = ImeAction.Next,
+                                    testTag = "detaillant_password_input"
+                                )
+                                SosHydroPasswordField(
+                                    value = confirmerMotDePasse,
+                                    onValueChange = { confirmerMotDePasse = it },
+                                    label = stringResource(R.string.form_password_confirm),
+                                    imeAction = ImeAction.Next,
+                                    testTag = "detaillant_password_confirm_input"
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -334,7 +416,7 @@ fun FormDetaillantScreen(
                                 modifier = Modifier.testTag("detaillant_stock_switch"),
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = StockEmerald,
+                                    checkedTrackColor = GasOrange,
                                     uncheckedThumbColor = Slate400,
                                     uncheckedTrackColor = Slate800
                                 )
@@ -345,6 +427,9 @@ fun FormDetaillantScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // Dynamic CTA: GPS on creation vs Direct submit on modification
+                val ctaContainerColor = if (isNewDetaillant) ElectricBlue else GasOrange
+
                 Button(
                     onClick = {
                         focusManager.clearFocus()
@@ -354,22 +439,54 @@ fun FormDetaillantScreen(
                             }
                             return@Button
                         }
-                        if (hasLocationPermission()) {
-                            onRequestGpsCapture()
-                        } else {
-                            locationPermissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                        if (isNewDetaillant && motDePasse.trim().isEmpty()) {
+                            coroutineScope.launch {
+                                snackbarHostState.showTypedSnackbar(passwordRequiredMsg, SnackbarTone.WARNING)
+                            }
+                            return@Button
+                        }
+                        if ((motDePasse.isNotEmpty() || confirmerMotDePasse.isNotEmpty()) &&
+                            motDePasse != confirmerMotDePasse
+                        ) {
+                            coroutineScope.launch {
+                                snackbarHostState.showTypedSnackbar(passwordMismatchMsg, SnackbarTone.ERROR)
+                            }
+                            return@Button
+                        }
+
+                        if (isNewDetaillant) {
+                            if (hasLocationPermission()) {
+                                onRequestGpsCapture()
+                            } else {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
                                 )
+                            }
+                        } else {
+                            // Direct submission without GPS recapture on existing boutique update
+                            onSubmit(
+                                initial.id,
+                                nomBoutique,
+                                nomGerant,
+                                quartier,
+                                telephone,
+                                motDePasse,
+                                prix6kg,
+                                prix12kg,
+                                enStock,
+                                initial.latitude,
+                                initial.longitude
                             )
                         }
                     },
                     enabled = !isBusy,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = ElectricBlue,
+                        containerColor = ctaContainerColor,
                         contentColor = Color.White,
-                        disabledContainerColor = ElectricBlue.copy(alpha = 0.5f)
+                        disabledContainerColor = ctaContainerColor.copy(alpha = 0.5f)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
@@ -394,14 +511,14 @@ fun FormDetaillantScreen(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Rounded.MyLocation,
+                            imageVector = if (isNewDetaillant) Icons.Rounded.MyLocation else Icons.Rounded.Save,
                             contentDescription = null
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = stringResource(
-                                if (isEdit) R.string.form_detaillant_submit_edit
-                                else R.string.form_detaillant_submit_new
+                                if (isNewDetaillant) R.string.form_detaillant_submit_new
+                                else R.string.form_detaillant_submit_edit
                             ),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold

@@ -17,11 +17,18 @@ class FournisseurRepository(
     private val apiService: SosHydroApiService
 ) {
 
-    suspend fun verifyStationPhone(telephone: String): NetworkResult<AuthLookupResult<StationData>> =
+    suspend fun verifyStationCredentials(
+        telephone: String,
+        motDePasse: String
+    ): NetworkResult<AuthLookupResult<StationData>> =
         withContext(Dispatchers.IO) {
             try {
                 val response = apiService.auth(
-                    AuthRequest(action = "auth_station", telephone = telephone.trim())
+                    AuthRequest(
+                        action = "auth_station",
+                        telephone = telephone.trim(),
+                        motDePasse = motDePasse
+                    )
                 )
                 val rawBody = response.body()?.string() ?: response.errorBody()?.string().orEmpty()
                 if (!response.isSuccessful) {
@@ -29,22 +36,42 @@ class FournisseurRepository(
                 }
 
                 val json = JSONObject(rawBody)
-                if (json.optString("status") == "found") {
-                    val dataObj = json.optJSONObject("data") ?: JSONObject()
-                    NetworkResult.Success(AuthLookupResult.Found(parseStationData(dataObj)))
-                } else {
-                    NetworkResult.Success(AuthLookupResult.NotFound)
+                val status = json.optString("status")
+                val msg = json.optString("message").takeIf { it.isNotBlank() }
+
+                when (status) {
+                    "found", "success" -> {
+                        val dataObj = json.optJSONObject("data") ?: JSONObject()
+                        NetworkResult.Success(AuthLookupResult.Found(parseStationData(dataObj)))
+                    }
+                    "error", "wrong_password", "invalid_password" -> {
+                        NetworkResult.Success(
+                            AuthLookupResult.AuthFailed(
+                                msg ?: "Mot de passe incorrect. Réessayez ou contactez le support WhatsApp (066 23 31 81)."
+                            )
+                        )
+                    }
+                    else -> {
+                        NetworkResult.Success(AuthLookupResult.NotFound(msg))
+                    }
                 }
             } catch (e: Exception) {
                 NetworkResult.Error(e.localizedMessage ?: "Erreur réseau")
             }
         }
 
-    suspend fun verifyDetaillantPhone(telephone: String): NetworkResult<AuthLookupResult<DetaillantData>> =
+    suspend fun verifyDetaillantCredentials(
+        telephone: String,
+        motDePasse: String
+    ): NetworkResult<AuthLookupResult<DetaillantData>> =
         withContext(Dispatchers.IO) {
             try {
                 val response = apiService.auth(
-                    AuthRequest(action = "auth_detaillant", telephone = telephone.trim())
+                    AuthRequest(
+                        action = "auth_detaillant",
+                        telephone = telephone.trim(),
+                        motDePasse = motDePasse
+                    )
                 )
                 val rawBody = response.body()?.string() ?: response.errorBody()?.string().orEmpty()
                 if (!response.isSuccessful) {
@@ -52,11 +79,24 @@ class FournisseurRepository(
                 }
 
                 val json = JSONObject(rawBody)
-                if (json.optString("status") == "found") {
-                    val dataObj = json.optJSONObject("data") ?: JSONObject()
-                    NetworkResult.Success(AuthLookupResult.Found(parseDetaillantData(dataObj)))
-                } else {
-                    NetworkResult.Success(AuthLookupResult.NotFound)
+                val status = json.optString("status")
+                val msg = json.optString("message").takeIf { it.isNotBlank() }
+
+                when (status) {
+                    "found", "success" -> {
+                        val dataObj = json.optJSONObject("data") ?: JSONObject()
+                        NetworkResult.Success(AuthLookupResult.Found(parseDetaillantData(dataObj)))
+                    }
+                    "error", "wrong_password", "invalid_password" -> {
+                        NetworkResult.Success(
+                            AuthLookupResult.AuthFailed(
+                                msg ?: "Mot de passe incorrect. Réessayez ou contactez le support WhatsApp (066 23 31 81)."
+                            )
+                        )
+                    }
+                    else -> {
+                        NetworkResult.Success(AuthLookupResult.NotFound(msg))
+                    }
                 }
             } catch (e: Exception) {
                 NetworkResult.Error(e.localizedMessage ?: "Erreur réseau")
@@ -127,6 +167,8 @@ class FournisseurRepository(
             nomStation = resolvedGroup,
             lieuDit = d.optString("lieu_dit", ""),
             telephone = d.optString("telephone", ""),
+            latitude = d.optStringVal("latitude", "0"),
+            longitude = d.optStringVal("longitude", "0"),
             estOuvert = d.optBoolFlag("est_ouvert", true),
             prixEssence = d.optStringVal("prix_essence", "850"),
             dispoEssence = d.optBoolFlag("dispo_essence", true),
@@ -163,6 +205,8 @@ class FournisseurRepository(
             nomGerant = d.optString("nom_gerant", ""),
             quartier = d.optString("quartier", ""),
             telephone = d.optString("telephone", ""),
+            latitude = d.optStringVal("latitude", "0"),
+            longitude = d.optStringVal("longitude", "0"),
             prix6kg = prix6,
             prix12kg = prix12,
             enStock = d.optBoolFlag("en_stock", true)

@@ -16,6 +16,8 @@ data class StationData(
     val nomStation: String = STATION_GROUPS.first(),
     val lieuDit: String = "",
     val telephone: String = "",
+    val latitude: String = "0",
+    val longitude: String = "0",
     val estOuvert: Boolean = true,
     val prixEssence: String = "850",
     val dispoEssence: Boolean = true,
@@ -35,6 +37,8 @@ data class DetaillantData(
     val nomGerant: String = "",
     val quartier: String = "",
     val telephone: String = "",
+    val latitude: String = "0",
+    val longitude: String = "0",
     val prix6kg: String = "5000",
     val prix12kg: String = "18000",
     val enStock: Boolean = true
@@ -49,7 +53,8 @@ data class GpsCaptureResult(
 @JsonClass(generateAdapter = true)
 data class AuthRequest(
     val action: String,
-    val telephone: String
+    val telephone: String,
+    @Json(name = "mot_de_passe") val motDePasse: String
 )
 
 @JsonClass(generateAdapter = true)
@@ -59,6 +64,7 @@ data class UpdateStationRequest(
     @Json(name = "nom_station") val nomStation: String,
     @Json(name = "lieu_dit") val lieuDit: String,
     val telephone: String,
+    @Json(name = "mot_de_passe") val motDePasse: String,
     val latitude: String,
     val longitude: String,
     @Json(name = "est_ouvert") val estOuvert: String,
@@ -82,6 +88,7 @@ data class UpdateDetaillantRequest(
     @Json(name = "nom_gerant") val nomGerant: String,
     val quartier: String,
     val telephone: String,
+    @Json(name = "mot_de_passe") val motDePasse: String,
     val latitude: String,
     val longitude: String,
     @Json(name = "prix_6kg") val prix6kg: String,
@@ -91,7 +98,8 @@ data class UpdateDetaillantRequest(
 
 sealed class AuthLookupResult<out T> {
     data class Found<T>(val data: T) : AuthLookupResult<T>()
-    data object NotFound : AuthLookupResult<Nothing>()
+    data class NotFound(val message: String?) : AuthLookupResult<Nothing>()
+    data class AuthFailed(val message: String) : AuthLookupResult<Nothing>()
 }
 
 sealed class NetworkResult<out T> {

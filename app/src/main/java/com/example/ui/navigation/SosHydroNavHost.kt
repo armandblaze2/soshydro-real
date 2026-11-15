@@ -54,7 +54,7 @@ fun SosHydroNavHost(
                 lastSavedPhone = lastStationPhone,
                 authEvents = viewModel.authEvents,
                 onBack = { navController.popBackStack() },
-                onSubmitPhone = viewModel::verifyStationPhone,
+                onSubmitCredentials = viewModel::verifyStationCredentials,
                 onCreateNew = { enteredPhone ->
                     viewModel.startNewStationRegistration(enteredPhone)
                     navController.navigate(SosHydroRoutes.ROUTE_FORM_STATION) {
@@ -76,7 +76,7 @@ fun SosHydroNavHost(
                 lastSavedPhone = lastDetaillantPhone,
                 authEvents = viewModel.authEvents,
                 onBack = { navController.popBackStack() },
-                onSubmitPhone = viewModel::verifyDetaillantPhone,
+                onSubmitCredentials = viewModel::verifyDetaillantCredentials,
                 onCreateNew = { enteredPhone ->
                     viewModel.startNewDetaillantRegistration(enteredPhone)
                     navController.navigate(SosHydroRoutes.ROUTE_FORM_DETAILLANT) {
@@ -103,7 +103,7 @@ fun SosHydroNavHost(
                 onBack = { navController.popBackStack() },
                 onRequestGpsCapture = viewModel::captureGpsForConfirmation,
                 onCancelGpsConfirmation = viewModel::cancelGpsConfirmation,
-                onSubmitConfirmed = viewModel::submitStationUpdate,
+                onSubmit = viewModel::submitStationUpdate,
                 onSuccessReturnHome = {
                     navController.popBackStack(SosHydroRoutes.ROUTE_ACCUEIL, inclusive = false)
                 }
@@ -122,7 +122,7 @@ fun SosHydroNavHost(
                 onBack = { navController.popBackStack() },
                 onRequestGpsCapture = viewModel::captureGpsForConfirmation,
                 onCancelGpsConfirmation = viewModel::cancelGpsConfirmation,
-                onSubmitConfirmed = viewModel::submitDetaillantUpdate,
+                onSubmit = viewModel::submitDetaillantUpdate,
                 onSuccessReturnHome = {
                     navController.popBackStack(SosHydroRoutes.ROUTE_ACCUEIL, inclusive = false)
                 }

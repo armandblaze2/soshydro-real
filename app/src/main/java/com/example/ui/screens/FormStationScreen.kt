@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.OilBarrel
 import androidx.compose.material.icons.rounded.Phone
 import androidx.compose.material.icons.rounded.PropaneTank
 import androidx.compose.material.icons.rounded.RadioButtonUnchecked
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -78,12 +79,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.R
-import com.example.data.model.GpsCaptureResult
 import com.example.data.model.STATION_GROUPS
 import com.example.data.model.StationData
 import com.example.ui.components.GpsConfirmationDialog
 import com.example.ui.components.GpsNoticeBanner
 import com.example.ui.components.SnackbarTone
+import com.example.ui.components.SosHydroPasswordField
 import com.example.ui.components.SosHydroSnackbarHost
 import com.example.ui.components.SosHydroTextField
 import com.example.ui.components.SosHydroTopBar
@@ -121,11 +122,12 @@ fun FormStationScreen(
     onBack: () -> Unit,
     onRequestGpsCapture: () -> Unit,
     onCancelGpsConfirmation: () -> Unit,
-    onSubmitConfirmed: (
+    onSubmit: (
         stationId: String,
         nomStation: String,
         lieuDit: String,
         telephone: String,
+        motDePasse: String,
         estOuvert: Boolean,
         prixEssence: String,
         dispoEssence: Boolean,
@@ -137,16 +139,19 @@ fun FormStationScreen(
         dispoGaz12kg: Boolean,
         prixGaz35kg: String,
         dispoGaz35kg: Boolean,
-        gps: GpsCaptureResult
+        latitude: String,
+        longitude: String
     ) -> Unit,
     onSuccessReturnHome: () -> Unit
 ) {
-    val isEdit = stationData != null
+    val isNewStation = stationData == null
     val initial = stationData ?: StationData(telephone = prefillPhone)
 
     var nomStation by rememberSaveable { mutableStateOf(initial.nomStation) }
     var lieuDit by rememberSaveable { mutableStateOf(initial.lieuDit) }
     var telephone by rememberSaveable { mutableStateOf(initial.telephone.ifBlank { prefillPhone }) }
+    var motDePasse by rememberSaveable { mutableStateOf("") }
+    var confirmerMotDePasse by rememberSaveable { mutableStateOf("") }
     var estOuvert by rememberSaveable { mutableStateOf(initial.estOuvert) }
 
     var prixEssence by rememberSaveable { mutableStateOf(initial.prixEssence) }
@@ -168,8 +173,11 @@ fun FormStationScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
+
     val permissionDeniedMsg = stringResource(R.string.gps_permission_denied)
     val phoneValidationMsg = stringResource(R.string.validation_phone_empty)
+    val passwordRequiredMsg = stringResource(R.string.validation_password_required)
+    val passwordMismatchMsg = stringResource(R.string.validation_password_mismatch)
 
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -208,11 +216,12 @@ fun FormStationScreen(
             gps = formSubmitState.gps,
             onDismiss = onCancelGpsConfirmation,
             onConfirm = {
-                onSubmitConfirmed(
+                onSubmit(
                     initial.id,
                     nomStation,
                     lieuDit,
                     telephone,
+                    motDePasse,
                     estOuvert,
                     prixEssence,
                     dispoEssence,
@@ -224,7 +233,8 @@ fun FormStationScreen(
                     dispoGaz12,
                     prixGaz35,
                     dispoGaz35,
-                    formSubmitState.gps
+                    formSubmitState.gps.latitude.toString(),
+                    formSubmitState.gps.longitude.toString()
                 )
             }
         )
@@ -233,15 +243,19 @@ fun FormStationScreen(
     val isBusy = formSubmitState is FormSubmitState.CapturingGps ||
         formSubmitState is FormSubmitState.Submitting
 
+    val headerTitle = if (!isNewStation) {
+        if (initial.lieuDit.isNotBlank()) "${initial.nomStation} (${initial.lieuDit})" else initial.nomStation
+    } else {
+        stringResource(R.string.form_station_title_new)
+    }
+
     Scaffold(
         containerColor = Slate950,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SosHydroSnackbarHost(snackbarHostState) },
         topBar = {
             SosHydroTopBar(
-                title = stringResource(
-                    if (isEdit) R.string.form_station_title_edit else R.string.form_station_title_new
-                ),
+                title = headerTitle,
                 icon = Icons.Rounded.LocalGasStation,
                 iconTint = SkyTelemetry,
                 onBackClick = onBack
@@ -264,9 +278,46 @@ fun FormStationScreen(
                     .padding(horizontal = 16.dp, vertical = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-                GpsNoticeBanner()
+                // Status mode pill
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (isNewStation) "Configuration initiale" else "Tableau de bord Station",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                    Surface(
+                        color = if (isNewStation) {
+                            StockEmerald.copy(alpha = 0.14f)
+                        } else {
+                            ElectricBlue.copy(alpha = 0.16f)
+                        },
+                        shape = RoundedCornerShape(50),
+                        border = BorderStroke(
+                            1.dp,
+                            if (isNewStation) StockEmerald.copy(alpha = 0.4f) else ElectricBlue.copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Text(
+                            text = stringResource(
+                                if (isNewStation) R.string.form_badge_new_gps else R.string.form_badge_edit_stock
+                            ),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = if (isNewStation) StockEmeraldBright else SkyTelemetry,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                }
 
-                // Identification & status card
+                // GPS Banner shown ONLY on initial creation
+                if (isNewStation) {
+                    GpsNoticeBanner(text = stringResource(R.string.form_gps_notice_station))
+                }
+
+                // Identification, password & status card
                 Surface(
                     color = Slate900,
                     shape = RoundedCornerShape(18.dp),
@@ -355,6 +406,37 @@ fun FormStationScreen(
                             isNumericMono = true,
                             testTag = "station_phone_input"
                         )
+
+                        // Double password matching block
+                        Surface(
+                            color = Slate950.copy(alpha = 0.65f),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, Slate700),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                SosHydroPasswordField(
+                                    value = motDePasse,
+                                    onValueChange = { motDePasse = it },
+                                    label = stringResource(
+                                        if (isNewStation) R.string.form_password_new
+                                        else R.string.form_password_optional
+                                    ),
+                                    imeAction = ImeAction.Next,
+                                    testTag = "station_password_input"
+                                )
+                                SosHydroPasswordField(
+                                    value = confirmerMotDePasse,
+                                    onValueChange = { confirmerMotDePasse = it },
+                                    label = stringResource(R.string.form_password_confirm),
+                                    imeAction = ImeAction.Next,
+                                    testTag = "station_password_confirm_input"
+                                )
+                            }
+                        }
 
                         HorizontalDivider(color = Slate800)
 
@@ -494,6 +576,10 @@ fun FormStationScreen(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
+                // Dynamic CTA: GPS Capture on Creation vs Direct Submit on Modification
+                val ctaContainerColor = if (isNewStation) StockEmerald else ElectricBlue
+                val ctaContentColor = if (isNewStation) Color(0xFF04261B) else Color.White
+
                 Button(
                     onClick = {
                         focusManager.clearFocus()
@@ -503,22 +589,61 @@ fun FormStationScreen(
                             }
                             return@Button
                         }
-                        if (hasLocationPermission()) {
-                            onRequestGpsCapture()
-                        } else {
-                            locationPermissionLauncher.launch(
-                                arrayOf(
-                                    Manifest.permission.ACCESS_FINE_LOCATION,
-                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                        if (isNewStation && motDePasse.trim().isEmpty()) {
+                            coroutineScope.launch {
+                                snackbarHostState.showTypedSnackbar(passwordRequiredMsg, SnackbarTone.WARNING)
+                            }
+                            return@Button
+                        }
+                        if ((motDePasse.isNotEmpty() || confirmerMotDePasse.isNotEmpty()) &&
+                            motDePasse != confirmerMotDePasse
+                        ) {
+                            coroutineScope.launch {
+                                snackbarHostState.showTypedSnackbar(passwordMismatchMsg, SnackbarTone.ERROR)
+                            }
+                            return@Button
+                        }
+
+                        if (isNewStation) {
+                            if (hasLocationPermission()) {
+                                onRequestGpsCapture()
+                            } else {
+                                locationPermissionLauncher.launch(
+                                    arrayOf(
+                                        Manifest.permission.ACCESS_FINE_LOCATION,
+                                        Manifest.permission.ACCESS_COARSE_LOCATION
+                                    )
                                 )
+                            }
+                        } else {
+                            // Direct submission without GPS recapture on existing station update
+                            onSubmit(
+                                initial.id,
+                                nomStation,
+                                lieuDit,
+                                telephone,
+                                motDePasse,
+                                estOuvert,
+                                prixEssence,
+                                dispoEssence,
+                                prixGazoil,
+                                dispoGazoil,
+                                prixPetrole,
+                                dispoPetrole,
+                                prixGaz12,
+                                dispoGaz12,
+                                prixGaz35,
+                                dispoGaz35,
+                                initial.latitude,
+                                initial.longitude
                             )
                         }
                     },
                     enabled = !isBusy,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = StockEmerald,
-                        contentColor = Color(0xFF04261B),
-                        disabledContainerColor = StockEmerald.copy(alpha = 0.5f)
+                        containerColor = ctaContainerColor,
+                        contentColor = ctaContentColor,
+                        disabledContainerColor = ctaContainerColor.copy(alpha = 0.5f)
                     ),
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier
@@ -528,7 +653,7 @@ fun FormStationScreen(
                 ) {
                     if (isBusy) {
                         CircularProgressIndicator(
-                            color = Color(0xFF04261B),
+                            color = ctaContentColor,
                             strokeWidth = 2.5.dp,
                             modifier = Modifier.size(22.dp)
                         )
@@ -543,14 +668,14 @@ fun FormStationScreen(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Rounded.MyLocation,
+                            imageVector = if (isNewStation) Icons.Rounded.MyLocation else Icons.Rounded.Save,
                             contentDescription = null
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
                             text = stringResource(
-                                if (isEdit) R.string.form_station_submit_edit
-                                else R.string.form_station_submit_new
+                                if (isNewStation) R.string.form_station_submit_new
+                                else R.string.form_station_submit_edit
                             ),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
@@ -640,7 +765,7 @@ private fun FuelProductRow(
                 cursorColor = SkyTelemetry
             ),
             modifier = Modifier
-                .weight(1.0f)
+                .weight(0.95f)
                 .testTag(priceTag)
         )
 

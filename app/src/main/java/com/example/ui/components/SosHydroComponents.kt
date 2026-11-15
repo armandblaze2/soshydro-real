@@ -19,6 +19,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.GpsFixed
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -42,6 +45,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +59,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.R
 import com.example.data.model.GpsCaptureResult
@@ -228,7 +237,10 @@ fun SosHydroTopBar(
 }
 
 @Composable
-fun GpsNoticeBanner(modifier: Modifier = Modifier) {
+fun GpsNoticeBanner(
+    text: String,
+    modifier: Modifier = Modifier
+) {
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = WarningAmber.copy(alpha = 0.10f),
@@ -247,7 +259,7 @@ fun GpsNoticeBanner(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
-                text = stringResource(R.string.form_gps_notice),
+                text = text,
                 style = MaterialTheme.typography.bodyMedium,
                 color = WarningAmberText
             )
@@ -343,6 +355,82 @@ fun SosHydroTextField(
 }
 
 @Composable
+fun SosHydroPasswordField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    modifier: Modifier = Modifier,
+    placeholder: String = "••••••••",
+    imeAction: ImeAction = ImeAction.Next,
+    onImeAction: () -> Unit = {},
+    testTag: String
+) {
+    var passwordVisible by remember { mutableStateOf(false) }
+
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(testTag),
+        label = {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        },
+        placeholder = {
+            Text(
+                text = placeholder,
+                color = Slate400.copy(alpha = 0.7f),
+                style = MaterialTheme.typography.bodyLarge
+            )
+        },
+        leadingIcon = {
+            Icon(
+                imageVector = Icons.Rounded.Lock,
+                contentDescription = null,
+                tint = Slate400
+            )
+        },
+        trailingIcon = {
+            IconButton(
+                onClick = { passwordVisible = !passwordVisible },
+                modifier = Modifier.minimumInteractiveComponentSize()
+            ) {
+                Icon(
+                    imageVector = if (passwordVisible) Icons.Rounded.VisibilityOff else Icons.Rounded.Visibility,
+                    contentDescription = if (passwordVisible) "Masquer le mot de passe" else "Afficher le mot de passe",
+                    tint = Slate400
+                )
+            }
+        },
+        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+        textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(
+            keyboardType = KeyboardType.Password,
+            imeAction = imeAction
+        ),
+        keyboardActions = KeyboardActions(
+            onDone = { onImeAction() },
+            onSend = { onImeAction() },
+            onGo = { onImeAction() }
+        ),
+        shape = RoundedCornerShape(14.dp),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Slate850,
+            unfocusedContainerColor = Slate800,
+            focusedBorderColor = ElectricBlue,
+            unfocusedBorderColor = Slate700,
+            focusedLabelColor = SkyTelemetry,
+            unfocusedLabelColor = Slate400,
+            cursorColor = SkyTelemetry
+        )
+    )
+}
+
+@Composable
 fun GpsConfirmationDialog(
     gps: GpsCaptureResult,
     onDismiss: () -> Unit,
@@ -415,7 +503,7 @@ fun GpsConfirmationDialog(
                 }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Voulez-vous valider cet ancrage et envoyer les données ?",
+                    text = "Voulez-vous valider et enregistrer ?",
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.85f)
                 )

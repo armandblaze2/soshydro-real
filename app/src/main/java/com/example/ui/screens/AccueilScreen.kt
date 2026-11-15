@@ -93,8 +93,7 @@ fun AccueilScreen(
             SosHydroTopBar(
                 title = stringResource(R.string.accueil_topbar_title),
                 icon = Icons.Rounded.Storefront,
-                iconTint = SkyTelemetry,
-                trailingBadge = "LIVE"
+                iconTint = SkyTelemetry
             )
         },
         bottomBar = {
