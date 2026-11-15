@@ -1,0 +1,79 @@
+<resources>
+    <string name="app_name">SOS-HYDRO</string>
+    <string name="accueil_topbar_title">Espace Fournisseur SOS-HYDRO</string>
+    <string name="accueil_live_badge">TÉLÉMÉTRIE LIVE</string>
+    <string name="accueil_hero_title">Gestion Réseau Carburant &amp; Gaz</string>
+    <string name="accueil_hero_subtitle">Sélectionnez votre profil pour mettre à jour vos données en temps réel sur SOS-HYDRO.</string>
+    <string name="accueil_btn_station_title">Je suis une Station-Service</string>
+    <string name="accueil_btn_station_desc">TotalEnergies, PetroGabon, Engen, OLA, Gab\'Oil</string>
+    <string name="accueil_btn_detaillant_title">Détaillant de Gaz (Quartier)</string>
+    <string name="accueil_btn_detaillant_desc">Boutiques &amp; épiceries • Bouteilles 6 kg et 12 kg</string>
+    <string name="accueil_footer_copyright">© 2026 Jumpsy Media Group • Télémétrie Libreville</string>
+
+    <string name="cd_logo_soshydro">Logo SOS-HYDRO Télémétrie</string>
+    <string name="cd_back">Retour</string>
+
+    <string name="auth_station_title">Accès Station-Service</string>
+    <string name="auth_station_prompt">Entrez votre numéro de téléphone</string>
+    <string name="auth_station_cta">Accéder au Tableau de Bord</string>
+    <string name="auth_station_first_visit">Première visite ? Enregistrer ma station</string>
+    <string name="auth_station_not_found">Numéro inconnu : Procédez au premier enregistrement GPS.</string>
+
+    <string name="auth_detaillant_title">Accès Détaillant de Gaz</string>
+    <string name="auth_detaillant_prompt">Votre Numéro de Téléphone</string>
+    <string name="auth_detaillant_cta">Se connecter</string>
+    <string name="auth_detaillant_first_visit">Nouvelle boutique ? Créer mon commerce</string>
+    <string name="auth_detaillant_not_found">Numéro non enregistré. Créez votre boutique ci-dessous.</string>
+
+    <string name="auth_phone_hint">06623XX67</string>
+    <string name="auth_phone_required">Veuillez entrer un numéro de téléphone.</string>
+    <string name="auth_last_used_phone">Dernier : %1$s</string>
+
+    <string name="form_gps_notice">Important : Vous devez être physiquement sur site pour ancrer l\'emplacement GPS exact.</string>
+    <string name="form_station_title_edit">Modification Station</string>
+    <string name="form_station_title_new">1er Ancrage Station</string>
+    <string name="form_station_group_label">Groupe / Enseigne</string>
+    <string name="form_station_lieudit_label">Lieu-dit exact (ex: Lac bleu)</string>
+    <string name="form_station_tel_label">Téléphone de contact</string>
+    <string name="form_station_open_label">Station Ouverte</string>
+    <string name="form_station_open_badge">OUVERTE</string>
+    <string name="form_station_closed_badge">FERMÉE</string>
+    <string name="form_station_products_header">Tarifs &amp; Disponibilité Stocks</string>
+    <string name="form_station_submit_edit">Mettre à jour ma Station</string>
+    <string name="form_station_submit_new">Enregistrer &amp; Ancrer GPS</string>
+
+    <string name="product_essence">Essence</string>
+    <string name="product_gazoil">Gazoil</string>
+    <string name="product_petrole">Pétrole</string>
+    <string name="product_gaz_12">Gaz (12kg)</string>
+    <string name="product_gaz_35">Gaz (35kg)</string>
+    <string name="currency_fcfa_suffix">F</string>
+    <string name="stock_available">En stock</string>
+    <string name="stock_out">Rupture</string>
+
+    <string name="form_detaillant_title_edit">Modification Boutique</string>
+    <string name="form_detaillant_title_new">Création Boutique Gaz</string>
+    <string name="form_detaillant_boutique_label">Nom de la Boutique / Épicerie</string>
+    <string name="form_detaillant_gerant_label">Nom du Gérant</string>
+    <string name="form_detaillant_quartier_label">Quartier (ex: Glass, PK8)</string>
+    <string name="form_detaillant_tel_label">Numéro WhatsApp / Téléphone</string>
+    <string name="form_detaillant_prix6_label">Prix Bouteille 6kg</string>
+    <string name="form_detaillant_prix12_label">Prix Bouteille 12kg</string>
+    <string name="form_detaillant_stock_label">Gaz en Stock (Disponible)</string>
+    <string name="form_detaillant_submit_edit">Mettre à jour la Boutique</string>
+    <string name="form_detaillant_submit_new">Enregistrer &amp; Ancrer GPS</string>
+
+    <string name="gps_dialog_title">Position GPS capturée !</string>
+    <string name="gps_dialog_body">Latitude : %1$s\nLongitude : %2$s\nPrécision : à %3$s m près.\n\nVoulez-vous valider ?</string>
+    <string name="gps_dialog_cancel">Annuler</string>
+    <string name="gps_dialog_confirm">Valider</string>
+    <string name="gps_capturing_label">Capture GPS haute précision…</string>
+    <string name="gps_permission_denied">Les permissions GPS ont été refusées. Activez la localisation pour ancrer votre point.</string>
+    <string name="gps_disabled_error">Le service de localisation GPS est désactivé sur l\'appareil.</string>
+    <string name="gps_generic_error">Erreur GPS : %1$s</string>
+    <string name="network_error">Erreur réseau : %1$s</string>
+    <string name="server_error">Erreur serveur</string>
+    <string name="validation_phone_empty">Veuillez renseigner un numéro de téléphone.</string>
+    <string name="validation_station_lieudit_empty">Veuillez renseigner le lieu-dit exact.</string>
+    <string name="validation_detaillant_fields_empty">Veuillez renseigner le nom de la boutique et le quartier.</string>
+</resources>

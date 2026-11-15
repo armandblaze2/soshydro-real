@@ -1,0 +1,962 @@
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:geolocator/geolocator.dart';
+
+void main() {
+  runApp(const SosHydroApp());
+}
+
+class SosHydroApp extends StatelessWidget {
+  const SosHydroApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'SOS-HYDRO Fournisseur',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0F172A),
+        primarySwatch: Colors.blue,
+      ),
+      home: const AccueilScreen(),
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// 1. ÉCRAN D'ACCUEIL
+// ------------------------------------------------------------------
+class AccueilScreen extends StatelessWidget {
+  const AccueilScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Row(
+          children: [
+            Icon(Icons.store, color: Colors.blueAccent, size: 20),
+            SizedBox(width: 10),
+            Text('Espace Fournisseur SOS-HYDRO',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(height: 20),
+              // Logo imposant
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: const Color(0xFF334155)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5))
+                  ],
+                ),
+                child: Image.asset(
+                  'assets/logotraffic.png',
+                  height: 130,
+                  width: 130,
+                  fit: BoxFit.contain,
+                ),
+              ),
+              const SizedBox(height: 30),
+              const Text(
+                'Gestion Réseau Carburant & Gaz',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Sélectionnez votre profil pour mettre à jour vos données en temps réel sur SOS-HYDRO.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade600,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const AuthStationScreen()));
+                  },
+                  icon: const Icon(Icons.local_gas_station),
+                  label: const Text('Je suis une Station-Service',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 15),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF334155),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) =>
+                                const AuthDetaillantScreen()));
+                  },
+                  icon: const Icon(Icons.local_fire_department,
+                      color: Colors.orangeAccent),
+                  label: const Text('Détaillant de Gaz (Quartier)',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(12),
+        color: const Color(0xFF1E293B),
+        child: const Text(
+          '© 2026 Jumpsy Media Group • Télémétrie Libreville',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 10, color: Colors.grey),
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// 2A. AUTHENTIFICATION STATION
+// ------------------------------------------------------------------
+class AuthStationScreen extends StatefulWidget {
+  const AuthStationScreen({super.key});
+
+  @override
+  State<AuthStationScreen> createState() => _AuthStationState();
+}
+
+class _AuthStationState extends State<AuthStationScreen> {
+  final TextEditingController _telController = TextEditingController();
+  bool _isLoading = false;
+  final String apiUrl =
+      "https://placard-elevator-five.ngrok-free.dev/drive/api_fournisseur.php";
+
+  Future<void> _verifierTelephone() async {
+    if (_telController.text.trim().isEmpty) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: jsonEncode({
+          "action": "auth_station",
+          "telephone": _telController.text.trim()
+        }),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (data['status'] == 'found') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  FormStationScreen(stationData: data['data'])),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Numéro inconnu : Procédez au premier enregistrement GPS.'),
+              backgroundColor: Colors.orange),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) => const FormStationScreen(stationData: null)),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Erreur réseau : $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+          backgroundColor: const Color(0xFF1E293B),
+          title: const Text('Accès Station-Service',
+              style: TextStyle(fontSize: 14))),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.local_gas_station,
+                size: 50, color: Colors.blueAccent),
+            const SizedBox(height: 15),
+            const Text('Entrez votre numéro de téléphone',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 25),
+            TextField(
+              controller: _telController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                hintText: '06623XX67',
+                filled: true,
+                fillColor: const Color(0xFF1E293B),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade600,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _isLoading ? null : _verifierTelephone,
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Accéder au Tableau de Bord'),
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            const FormStationScreen(stationData: null)));
+              },
+              child: const Text('Première visite ? Enregistrer ma station',
+                  style: TextStyle(color: Colors.greenAccent)),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// 2B. AUTHENTIFICATION DÉTAILLANT DE GAZ
+// ------------------------------------------------------------------
+class AuthDetaillantScreen extends StatefulWidget {
+  const AuthDetaillantScreen({super.key});
+
+  @override
+  State<AuthDetaillantScreen> createState() => _AuthDetaillantState();
+}
+
+class _AuthDetaillantState extends State<AuthDetaillantScreen> {
+  final TextEditingController _telController = TextEditingController();
+  bool _isLoading = false;
+  final String apiUrl =
+      "https://placard-elevator-five.ngrok-free.dev/drive/api_fournisseur.php";
+
+  Future<void> _verifierDetaillant() async {
+    if (_telController.text.trim().isEmpty) return;
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: jsonEncode({
+          "action": "auth_detaillant",
+          "telephone": _telController.text.trim()
+        }),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (data['status'] == 'found') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  FormDetaillantScreen(detaillantData: data['data'])),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Numéro non enregistré. Créez votre boutique ci-dessous.'),
+              backgroundColor: Colors.orange),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+              builder: (context) =>
+                  const FormDetaillantScreen(detaillantData: null)),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text('Erreur réseau : $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+          backgroundColor: const Color(0xFF1E293B),
+          title: const Text('Accès Détaillant de Gaz',
+              style: TextStyle(fontSize: 14))),
+      body: Padding(
+        padding: const EdgeInsets.all(20.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.local_fire_department,
+                size: 50, color: Colors.orangeAccent),
+            const SizedBox(height: 15),
+            const Text('Votre Numéro de Téléphone',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 25),
+            TextField(
+              controller: _telController,
+              keyboardType: TextInputType.phone,
+              decoration: InputDecoration(
+                hintText: '06623XX67',
+                filled: true,
+                fillColor: const Color(0xFF1E293B),
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none),
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange.shade700,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: _isLoading ? null : _verifierDetaillant,
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text('Se connecter'),
+              ),
+            ),
+            const SizedBox(height: 20),
+            TextButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) =>
+                            const FormDetaillantScreen(detaillantData: null)));
+              },
+              child: const Text('Nouvelle boutique ? Créer mon commerce',
+                  style: TextStyle(color: Colors.orangeAccent)),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// 3. FORMULAIRE STATION (Avec GPS Haute Précision)
+// ------------------------------------------------------------------
+class FormStationScreen extends StatefulWidget {
+  final Map<String, dynamic>? stationData;
+  const FormStationScreen({super.key, this.stationData});
+
+  @override
+  State<FormStationScreen> createState() => _FormStationState();
+}
+
+class _FormStationState extends State<FormStationScreen> {
+  final List<String> groupes = [
+    "TotalEnergies",
+    "PetroGabon",
+    "Engen",
+    "OLA Energy",
+    "Gab'Oil"
+  ];
+  late String nomStation;
+  late TextEditingController lieuDitController;
+  late TextEditingController telController;
+  bool estOuvert = true;
+
+  late TextEditingController prixEssenceController;
+  bool dispoEssence = true;
+  late TextEditingController prixGazoilController;
+  bool dispoGazoil = true;
+  late TextEditingController prixPetroleController;
+  bool dispoPetrole = true;
+  late TextEditingController prixGaz12Controller;
+  bool dispoGaz12 = true;
+  late TextEditingController prixGaz35Controller;
+  bool dispoGaz35 = true;
+
+  bool _isSaving = false;
+  final String apiUrl =
+      "https://placard-elevator-five.ngrok-free.dev/drive/api_fournisseur.php";
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.stationData;
+    nomStation = d != null
+        ? (groupes.contains(d['nom_station']) ? d['nom_station'] : groupes[0])
+        : groupes[0];
+    lieuDitController =
+        TextEditingController(text: d != null ? d['lieu_dit'] ?? '' : '');
+    telController =
+        TextEditingController(text: d != null ? d['telephone'] ?? '' : '');
+    estOuvert =
+        d != null ? (d['est_ouvert'] == 1 || d['est_ouvert'] == true) : true;
+
+    prixEssenceController = TextEditingController(
+        text: d != null ? d['prix_essence'].toString() : '850');
+    dispoEssence = d != null
+        ? (d['dispo_essence'] == 1 || d['dispo_essence'] == true)
+        : true;
+
+    prixGazoilController = TextEditingController(
+        text: d != null ? d['prix_gazoil'].toString() : '750');
+    dispoGazoil = d != null
+        ? (d['dispo_gazoil'] == 1 || d['dispo_gazoil'] == true)
+        : true;
+
+    prixPetroleController = TextEditingController(
+        text: d != null ? d['prix_petrole'].toString() : '650');
+    dispoPetrole = d != null
+        ? (d['dispo_petrole'] == 1 || d['dispo_petrole'] == true)
+        : true;
+
+    prixGaz12Controller = TextEditingController(
+        text: d != null ? d['prix_gaz'].toString() : '6000');
+    dispoGaz12 =
+        d != null ? (d['dispo_gaz'] == 1 || d['dispo_gaz'] == true) : true;
+
+    prixGaz35Controller = TextEditingController(
+        text: d != null ? d['prix_gaz_35kg'].toString() : '14000');
+    dispoGaz35 = d != null
+        ? (d['dispo_gaz_35kg'] == 1 || d['dispo_gaz_35kg'] == true)
+        : true;
+  }
+
+  Future<void> _capturerGpsEtSoumettre() async {
+    setState(() => _isSaving = true);
+
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw 'Le service de localisation GPS est désactivé.';
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          throw 'Les permissions GPS ont été refusées.';
+        }
+      }
+
+      // Utilisation du paramètre de réglages moderne pour le géolocaliseur
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+
+      double lat = position.latitude;
+      double lng = position.longitude;
+      double precision = position.accuracy;
+
+      if (!mounted) return;
+
+      bool? confirmer = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          title: const Text('Position GPS capturée !'),
+          content: Text(
+              'Latitude: ${lat.toStringAsFixed(5)}\nLongitude: ${lng.toStringAsFixed(5)}\nPrécision: à ${precision.toStringAsFixed(0)}m près.\n\nVoulez-vous valider ?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Annuler')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Valider')),
+          ],
+        ),
+      );
+
+      if (confirmer == true) {
+        await _envoyerDonnees(lat, lng);
+      } else {
+        setState(() => _isSaving = false);
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur GPS : $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _envoyerDonnees(double lat, double lng) async {
+    try {
+      final body = {
+        "action": "mettre_a_jour_station",
+        "station_id": widget.stationData != null
+            ? widget.stationData!['id'].toString()
+            : "0",
+        "nom_station": nomStation,
+        "lieu_dit": lieuDitController.text.trim(),
+        "telephone": telController.text.trim(),
+        "latitude": lat.toString(),
+        "longitude": lng.toString(),
+        "est_ouvert": estOuvert ? "1" : "0",
+        "prix_essence": prixEssenceController.text,
+        "dispo_essence": dispoEssence ? "1" : "0",
+        "prix_gazoil": prixGazoilController.text,
+        "dispo_gazoil": dispoGazoil ? "1" : "0",
+        "prix_petrole": prixPetroleController.text,
+        "dispo_petrole": dispoPetrole ? "1" : "0",
+        "prix_gaz_12kg": prixGaz12Controller.text,
+        "dispo_gaz_12kg": dispoGaz12 ? "1" : "0",
+        "prix_gaz_35kg": prixGaz35Controller.text,
+        "dispo_gaz_35kg": dispoGaz35 ? "1" : "0",
+      };
+
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: jsonEncode(body),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+
+      if (data['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(data['message']), backgroundColor: Colors.green));
+        Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const AccueilScreen()),
+            (route) => false);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(data['message'] ?? 'Erreur serveur'),
+            backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool isModif = widget.stationData != null;
+    return Scaffold(
+      appBar: AppBar(
+          backgroundColor: const Color(0xFF1E293B),
+          title:
+              Text(isModif ? 'Modification Station' : '1er Ancrage Station')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: Colors.amber.withValues(alpha: 0.3))),
+              child: const Text(
+                  'Important : Vous devez être physiquement sur site pour ancrer l\'emplacement GPS exact.',
+                  style: TextStyle(fontSize: 11, color: Colors.amberAccent)),
+            ),
+            const SizedBox(height: 15),
+            DropdownButtonFormField<String>(
+              value: nomStation,
+              dropdownColor: const Color(0xFF1E293B),
+              items: groupes
+                  .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                  .toList(),
+              onChanged: (val) => setState(() => nomStation = val!),
+              decoration: const InputDecoration(
+                  labelText: 'Groupe / Enseigne',
+                  filled: true,
+                  fillColor: Color(0xFF1E293B)),
+            ),
+            const SizedBox(height: 10),
+            TextField(
+                controller: lieuDitController,
+                decoration: const InputDecoration(
+                    labelText: 'Lieu-dit exact (ex: Lac bleu)',
+                    filled: true,
+                    fillColor: Color(0xFF1E293B))),
+            const SizedBox(height: 10),
+            TextField(
+                controller: telController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                    labelText: 'Téléphone de contact',
+                    filled: true,
+                    fillColor: Color(0xFF1E293B))),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              title:
+                  const Text('Station Ouverte', style: TextStyle(fontSize: 14)),
+              value: estOuvert,
+              onChanged: (val) => setState(() => estOuvert = val),
+            ),
+            const Divider(color: Colors.grey),
+            _buildCarburantItem('Essence', prixEssenceController, dispoEssence,
+                (val) => setState(() => dispoEssence = val)),
+            _buildCarburantItem('Gazoil', prixGazoilController, dispoGazoil,
+                (val) => setState(() => dispoGazoil = val)),
+            _buildCarburantItem('Pétrole', prixPetroleController, dispoPetrole,
+                (val) => setState(() => dispoPetrole = val)),
+            _buildCarburantItem('Gaz (12kg)', prixGaz12Controller, dispoGaz12,
+                (val) => setState(() => dispoGaz12 = val)),
+            _buildCarburantItem('Gaz (35kg)', prixGaz35Controller, dispoGaz35,
+                (val) => setState(() => dispoGaz35 = val)),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green.shade600,
+                    padding: const EdgeInsets.symmetric(vertical: 16)),
+                onPressed: _isSaving ? null : _capturerGpsEtSoumettre,
+                icon: _isSaving
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Icon(Icons.my_location),
+                label: Text(isModif
+                    ? 'Mettre à jour ma Station'
+                    : 'Enregistrer & Ancrer GPS'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCarburantItem(String nom, TextEditingController controller,
+      bool dispo, Function(bool) onDispoChanged) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6.0),
+      child: Row(
+        children: [
+          Expanded(
+              flex: 2,
+              child: Text(nom,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.bold))),
+          Expanded(
+            flex: 2,
+            child: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                  suffixText: 'F',
+                  isDense: true,
+                  filled: true,
+                  fillColor: Color(0xFF1E293B)),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 2,
+            child: CheckboxListTile(
+              title: const Text('En stock', style: TextStyle(fontSize: 11)),
+              value: dispo,
+              onChanged: (val) => onDispoChanged(val!),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ------------------------------------------------------------------
+// 4. FORMULAIRE DÉTAILLANT DE GAZ (Avec GPS Haute Précision)
+// ------------------------------------------------------------------
+class FormDetaillantScreen extends StatefulWidget {
+  final Map<String, dynamic>? detaillantData;
+  const FormDetaillantScreen({super.key, this.detaillantData});
+
+  @override
+  State<FormDetaillantScreen> createState() => _FormDetaillantState();
+}
+
+class _FormDetaillantState extends State<FormDetaillantScreen> {
+  late TextEditingController nomBoutiqueController;
+  late TextEditingController nomGerantController;
+  late TextEditingController quartierController;
+  late TextEditingController telController;
+  late TextEditingController prix6kgController;
+  late TextEditingController prix12kgController;
+  bool enStock = true;
+
+  bool _isSaving = false;
+  final String apiUrl =
+      "https://placard-elevator-five.ngrok-free.dev/drive/api_fournisseur.php";
+
+  @override
+  void initState() {
+    super.initState();
+    final d = widget.detaillantData;
+    nomBoutiqueController =
+        TextEditingController(text: d != null ? d['nom_boutique'] ?? '' : '');
+    nomGerantController =
+        TextEditingController(text: d != null ? d['nom_gerant'] ?? '' : '');
+    quartierController =
+        TextEditingController(text: d != null ? d['quartier'] ?? '' : '');
+    telController =
+        TextEditingController(text: d != null ? d['telephone'] ?? '' : '');
+    prix6kgController = TextEditingController(
+        text: d != null ? d['prix_bouteille_6kg'].toString() : '5000');
+    prix12kgController = TextEditingController(
+        text: d != null ? d['prix_bouteille_12kg'].toString() : '18000');
+    enStock = d != null ? (d['en_stock'] == 1 || d['en_stock'] == true) : true;
+  }
+
+  Future<void> _capturerGpsEtSoumettre() async {
+    setState(() => _isSaving = true);
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+      double lat = position.latitude;
+      double lng = position.longitude;
+      double precision = position.accuracy;
+
+      if (!mounted) return;
+
+      bool? confirmer = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: const Color(0xFF1E293B),
+          title: const Text('Position GPS capturée !'),
+          content: Text(
+              'Latitude: ${lat.toStringAsFixed(5)}\nLongitude: ${lng.toStringAsFixed(5)}\nPrécision: à ${precision.toStringAsFixed(0)}m près.\n\nVoulez-vous valider ?'),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Annuler')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Valider')),
+          ],
+        ),
+      );
+
+      if (confirmer == true) {
+        await _envoyerDonnees(lat, lng);
+      } else {
+        setState(() => _isSaving = false);
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Erreur GPS : $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  Future<void> _envoyerDonnees(double lat, double lng) async {
+    try {
+      final body = {
+        "action": "maj_detaillant_gaz",
+        "detaillant_id": widget.detaillantData != null
+            ? widget.detaillantData!['id'].toString()
+            : "0",
+        "nom_boutique": nomBoutiqueController.text.trim(),
+        "nom_gerant": nomGerantController.text.trim(),
+        "quartier": quartierController.text.trim(),
+        "telephone": telController.text.trim(),
+        "latitude": lat.toString(),
+        "longitude": lng.toString(),
+        "prix_6kg": prix6kgController.text,
+        "prix_12kg": prix12kgController.text,
+        "en_stock": enStock ? "1" : "0",
+      };
+
+      final response = await http.post(
+        Uri.parse(apiUrl),
+        body: jsonEncode(body),
+        headers: {"Content-Type": "application/json"},
+      );
+
+      final data = jsonDecode(response.body);
+
+      if (!mounted) return;
+      setState(() => _isSaving = false);
+
+      if (data['status'] == 'success') {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(data['message']), backgroundColor: Colors.green));
+        Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const AccueilScreen()),
+            (route) => false);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(data['message'] ?? 'Erreur serveur'),
+            backgroundColor: Colors.red));
+      }
+    } catch (e) {
+      setState(() => _isSaving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur : $e'), backgroundColor: Colors.red));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    bool isModif = widget.detaillantData != null;
+    return Scaffold(
+      appBar: AppBar(
+          backgroundColor: const Color(0xFF1E293B),
+          title: Text(
+              isModif ? 'Modification Boutique' : 'Création Boutique Gaz')),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+                controller: nomBoutiqueController,
+                decoration: const InputDecoration(
+                    labelText: 'Nom de la Boutique / Épicerie',
+                    filled: true,
+                    fillColor: Color(0xFF1E293B))),
+            const SizedBox(height: 10),
+            TextField(
+                controller: nomGerantController,
+                decoration: const InputDecoration(
+                    labelText: 'Nom du Gérant',
+                    filled: true,
+                    fillColor: Color(0xFF1E293B))),
+            const SizedBox(height: 10),
+            TextField(
+                controller: quartierController,
+                decoration: const InputDecoration(
+                    labelText: 'Quartier (ex: Glass, PK8)',
+                    filled: true,
+                    fillColor: Color(0xFF1E293B))),
+            const SizedBox(height: 10),
+            TextField(
+                controller: telController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(
+                    labelText: 'Numéro WhatsApp / Téléphone',
+                    filled: true,
+                    fillColor: Color(0xFF1E293B))),
+            const SizedBox(height: 10),
+            TextField(
+                controller: prix6kgController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Prix Bouteille 6kg',
+                    filled: true,
+                    fillColor: Color(0xFF1E293B))),
+            const SizedBox(height: 10),
+            TextField(
+                controller: prix12kgController,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                    labelText: 'Prix Bouteille 12kg',
+                    filled: true,
+                    fillColor: Color(0xFF1E293B))),
+            const SizedBox(height: 10),
+            SwitchListTile(
+              title: const Text('Gaz en Stock (Disponible)',
+                  style: TextStyle(fontSize: 14)),
+              value: enStock,
+              onChanged: (val) => setState(() => enStock = val),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade600,
+                    padding: const EdgeInsets.symmetric(vertical: 16)),
+                onPressed: _isSaving ? null : _capturerGpsEtSoumettre,
+                icon: _isSaving
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Icon(Icons.my_location),
+                label: Text(isModif
+                    ? 'Mettre à jour la Boutique'
+                    : 'Enregistrer & Ancrer GPS'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
