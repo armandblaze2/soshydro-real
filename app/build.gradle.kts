@@ -9,17 +9,15 @@ plugins {
 }
 
 android {
-  namespace = "com.soshydro"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+  namespace = "com.jumpsymediagroup.soshydro" // Votre package name unique
+    compileSdk = 34
 
-  defaultConfig {
-    applicationId = "com.jmg.soshydro"
-    minSdk = 24
-    targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
-
-    testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    defaultConfig {
+        applicationId = "com.jumpsymediagroup.soshydro" // Doit être identique au namespace
+        minSdk = 24
+        targetSdk = 34
+        versionCode = 1        // Entier à incrémenter à chaque mise à jour (1, 2, 3...)
+        versionName = "1.0.0"  // Version affichée aux utilisateurs
   }
 
   // Do not remove or modify these signingConfigs. They are necessary for building, installing,
