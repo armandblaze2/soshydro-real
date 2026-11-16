@@ -65,6 +65,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.R
 import com.example.ui.components.SnackbarTone
 import com.example.ui.components.SosHydroPasswordField
@@ -75,13 +76,14 @@ import com.example.ui.components.showTypedSnackbar
 import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.GasAmber
 import com.example.ui.theme.GasOrange
+import com.example.ui.theme.JetBrainsMonoFontFamily
 import com.example.ui.theme.SkyTelemetry
-import com.example.ui.theme.Slate200
 import com.example.ui.theme.Slate400
 import com.example.ui.theme.Slate700
 import com.example.ui.theme.Slate800
 import com.example.ui.theme.Slate900
 import com.example.ui.theme.Slate950
+import com.example.ui.theme.StockEmerald
 import com.example.ui.theme.StockEmeraldBright
 import com.example.ui.viewmodel.AuthNavigationEvent
 import com.example.ui.viewmodel.AuthUiState
@@ -324,49 +326,63 @@ fun AuthScreen(
                             }
                         }
 
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         // Support WhatsApp (Mot de passe oublié)
-                        TextButton(
-                            onClick = {
-                                runCatching {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(whatsappUrl))
-                                    context.startActivity(intent)
-                                }.onFailure {
-                                    coroutineScope.launch {
-                                        snackbarHostState.showTypedSnackbar(
-                                            "Support WhatsApp : 066 23 31 81",
-                                            SnackbarTone.INFO
-                                        )
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .minimumInteractiveComponentSize()
-                                .testTag("auth_whatsapp_support_button")
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
+                            Text(
+                                text = stringResource(R.string.auth_forgot_password_prefix),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = Slate400,
+                                textAlign = TextAlign.Center
+                            )
+                            Surface(
+                                onClick = {
+                                    runCatching {
+                                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(whatsappUrl))
+                                        context.startActivity(intent)
+                                    }.onFailure {
+                                        coroutineScope.launch {
+                                            snackbarHostState.showTypedSnackbar(
+                                                "Support WhatsApp : 066 23 31 81",
+                                                SnackbarTone.INFO
+                                            )
+                                        }
+                                    }
+                                },
+                                color = StockEmerald.copy(alpha = 0.12f),
+                                shape = RoundedCornerShape(12.dp),
+                                border = BorderStroke(1.dp, StockEmerald.copy(alpha = 0.4f)),
+                                modifier = Modifier
+                                    .minimumInteractiveComponentSize()
+                                    .testTag("auth_whatsapp_support_button")
                             ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Rounded.Chat,
-                                    contentDescription = null,
-                                    tint = StockEmeraldBright,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = "${stringResource(R.string.auth_forgot_password_prefix)} ",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Slate400
-                                )
-                                Text(
-                                    text = stringResource(R.string.auth_support_phone),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Slate200
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Rounded.Chat,
+                                        contentDescription = null,
+                                        tint = StockEmeraldBright,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Text(
+                                        text = stringResource(R.string.auth_support_phone),
+                                        fontFamily = JetBrainsMonoFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        letterSpacing = 1.sp,
+                                        maxLines = 1,
+                                        color = Color.White
+                                    )
+                                }
                             }
                         }
 

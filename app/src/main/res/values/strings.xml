@@ -33,8 +33,8 @@
     <string name="auth_password_hint">••••••••</string>
     <string name="auth_credentials_required">Veuillez renseigner votre numéro et votre mot de passe.</string>
     <string name="auth_last_used_phone">Dernier : %1$s</string>
-    <string name="auth_forgot_password_prefix">Mot de passe oublié ? Écrivez-nous au</string>
-    <string name="auth_support_phone">066 23 31 81</string>
+    <string name="auth_forgot_password_prefix">Mot de passe oublié ? Contactez le support :</string>
+    <string name="auth_support_phone">066\u00A023\u00A031\u00A081</string>
 
     <string name="form_gps_notice_station">Important : Vous devez être physiquement sur site pour que le GPS capture l\'emplacement exact de la station.</string>
     <string name="form_gps_notice_detaillant">Important : Vous devez être physiquement sur place pour ancrer la position GPS exacte de votre commerce.</string>

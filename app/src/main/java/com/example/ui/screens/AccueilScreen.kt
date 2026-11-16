@@ -99,18 +99,18 @@ fun AccueilScreen(
         bottomBar = {
             Surface(
                 color = Slate900,
-                tonalElevation = 2.dp
+                tonalElevation = 1.dp
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = stringResource(R.string.accueil_footer_copyright),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = MaterialTheme.typography.labelSmall,
                         color = Slate400,
                         textAlign = TextAlign.Center
                     )
@@ -151,7 +151,7 @@ fun AccueilScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 24.dp),
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -162,7 +162,7 @@ fun AccueilScreen(
                     // Official SOS-HYDRO logo container
                     Surface(
                         color = Slate800,
-                        shape = RoundedCornerShape(22.dp),
+                        shape = RoundedCornerShape(20.dp),
                         border = BorderStroke(
                             width = 1.dp,
                             brush = Brush.linearGradient(
@@ -173,10 +173,10 @@ fun AccueilScreen(
                                 )
                             )
                         ),
-                        shadowElevation = 12.dp
+                        shadowElevation = 10.dp
                     ) {
                         Box(
-                            modifier = Modifier.padding(8.dp),
+                            modifier = Modifier.padding(6.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Image(
@@ -184,13 +184,13 @@ fun AccueilScreen(
                                 contentDescription = stringResource(R.string.cd_logo_soshydro),
                                 contentScale = ContentScale.Fit,
                                 modifier = Modifier
-                                    .size(130.dp)
-                                    .clip(RoundedCornerShape(16.dp))
+                                    .size(104.dp)
+                                    .clip(RoundedCornerShape(14.dp))
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(26.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
                         text = stringResource(R.string.accueil_hero_title),
@@ -199,7 +199,7 @@ fun AccueilScreen(
                         textAlign = TextAlign.Center
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
                         text = stringResource(R.string.accueil_hero_subtitle),
@@ -209,7 +209,7 @@ fun AccueilScreen(
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(34.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
                     if (isWide) {
                         Row(
@@ -251,7 +251,7 @@ fun AccueilScreen(
                             onClick = onStationClick,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Spacer(modifier = Modifier.height(14.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
                         ProfileSelectorCard(
                             title = stringResource(R.string.accueil_btn_detaillant_title),
                             subtitle = stringResource(R.string.accueil_btn_detaillant_desc),
@@ -303,7 +303,7 @@ private fun ProfileSelectorCard(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 18.dp, vertical = 18.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
