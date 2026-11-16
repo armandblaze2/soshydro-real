@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-  namespace = "com.jumpsymediagroup.soshydro" // Votre package name unique
+  namespace = "com.example" // Votre package name unique
     compileSdk = 36
 
     defaultConfig {
