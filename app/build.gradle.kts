@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
+  namespace = "com.soshydro"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.soshydro.kxmrpv"
+    applicationId = "com.jmg.soshydro"
     minSdk = 24
     targetSdk = 36
     versionCode = 1
